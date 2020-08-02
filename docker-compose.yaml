@@ -1,0 +1,43 @@
+version: '3'
+services:
+  db:
+    image: postgressdatadog:latest
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+  web:
+    build: .
+    command: ddtrace-run python manage.py runserver 0.0.0.0:8000
+    environment:
+      - DD_AGENT_HOST=apmdemosite_datadog_1
+      - DD_RUNTIME_METRICS_ENABLED=true
+      - DD_ENV="dev"
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+  datadog:
+    image: datadog/agent:latest
+    env_file:
+      - ~/.sandbox.docker.env
+    environment:
+     - DD_APM_ENABLED=true
+     - DD_APM_NON_LOCAL_TRAFFIC=true
+     - DD_LOGS_ENABLED=true
+     - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+     - DD_CONTAINER_EXCLUDE="name:datadog-agent"
+     - DD_ENV="dev"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - /proc/:/host/proc/:ro
+     - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+
+    labels:
+      com.datadoghq.ad.check_names: '["postgres"]'
+      com.datadoghq.ad.init_configs: '[{}]'
+      com.datadoghq.ad.instances: '[{"host": "apmdemosite_db_1","port":"5432","username":"datadog","password":"datadog"}]'
+      # com.datadoghq.tags.env: "none"
+      # com.datadoghq.tags.service: "django"
