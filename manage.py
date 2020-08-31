@@ -2,6 +2,12 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import requests
+from ddtrace import tracer
+
+def get_aws_ip():
+  r = requests.get('http://169.254.169.254/latest/meta-data/local-ipv4')
+  return r.text
 
 
 def main():
@@ -18,4 +24,5 @@ def main():
 
 
 if __name__ == '__main__':
+    tracer.configure(hostname=get_aws_ip())
     main()

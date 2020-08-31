@@ -1,0 +1,49 @@
+version: '3'
+services:
+  db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+  web:
+    image: 582301032396.dkr.ecr.us-east-1.amazonaws.com/ecs-apm-web
+    #command: ddtrace-run python manage.py runserver 0.0.0.0:8000
+    environment:
+      - DD_AGENT_HOST='10.0.1.117'
+      - DD_TRACE_AGENT_PORT=8126
+      - DD_RUNTIME_METRICS_ENABLED=true
+      - DATADOG_TRACE_DEBUG=true
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    links:
+      - db:db
+    logging:
+      driver: awslogs
+      options: 
+        awslogs-group: ec2-apm
+        awslogs-region: us-east-1
+        awslogs-stream-prefix: web
+  datadog:
+    image: datadog/agent:latest
+    env_file:
+      - .sandbox.docker.env
+    environment:
+     - DD_APM_ENABLED=true
+     - DD_APM_NON_LOCAL_TRAFFIC=true
+     - DD_LOGS_ENABLED=true
+     - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+     - DD_CONTAINER_EXCLUDE="name:datadog-agent"
+    ports:
+     - "8126:8126"
+    volumes:
+     - /var/run/docker.sock:/var/run/docker.sock
+     - /proc/:/host/proc/:ro
+     - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+
+       #    labels:
+       #com.datadoghq.ad.check_names: '["postgres"]'
+       #com.datadoghq.ad.init_configs: '[{}]'
+       #com.datadoghq.ad.instances: '[{"host": "djangoapm_db_1","port":"5432","username":"datadog","password":"datadog"}]'
